@@ -1,0 +1,16 @@
+this
+file
+is
+for
+character
+shorthand
+in
+scripts
+to
+replace
+with
+corresponding
+name
+from
+charnames_fixed
+file

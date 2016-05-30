@@ -1,0 +1,6 @@
+\n
+ with dissolve
+{fast}
+{w=0.5}
+{nw}
+centered 

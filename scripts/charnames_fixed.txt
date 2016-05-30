@@ -1,0 +1,16 @@
+this
+file
+is
+for
+character
+formal
+names
+in_scripts
+to
+use
+to_replace
+corresponding
+names
+from
+charnames
+file
