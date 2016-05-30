@@ -2,10 +2,9 @@
 	RPY-eBook
 		By Sam Lynch
 
-	For parsing rpy script into eBook-friendly format
+	For parsing .rpy script into eBook-friendly text
 */
 
-#include "PDF.h"
 #include "DebugStrings.h"
 
 #include <iostream>
@@ -34,23 +33,24 @@ static std::vector<std::wstring> prefixesToRemove;
 static std::vector<std::wstring> charNames;
 static std::vector<std::wstring> charNames_fixed;
 
-std::vector<std::vector<int>> g_chapterDividers; 
+static std::vector<std::vector<int>> g_chapterDividers; 
 
 // Prototypes
-void WriteScriptToTXT(std::vector<std::vector<std::wstring>>& fileLines);
-void LoadRequiredTextFiles(void);
-int CleanScript(std::vector<std::wstring>& _input);
+int WriteScriptToTXT(std::vector<std::vector<std::wstring>>& fileLines, const char* _filename);
+int LoadRequiredTextFiles(void);
+int CleanScript(std::vector<std::wstring>& _input, std::vector<std::wstring>&);
 int LoadScriptIntoVector( const wchar_t* _input, std::vector<std::wstring>& _vector );
 int LoadTXTIntoVector( const char* _file, std::vector<std::wstring>& _vector );
-void error_handler (HPDF_STATUS error_no, HPDF_STATUS detail_no, void *user_data);
 
-int main(int argc, char **argv)
+int main(int argc, char* argv[])
 {
+	std::cout << "RPY-eBook (c) Sam Lynch" << std::endl << std::endl;
+
 	// Start the clock for benchmarking
 	clock_t begin = clock();
 	
-	// Start the clock for benchmarking
-	LoadRequiredTextFiles();
+	// Load all the configs into the appropriate vectors
+	if(LoadRequiredTextFiles() != 0) return -1;
 
 	// Create wstring versions of constants
 	std::wstring loadingstr_w;
@@ -62,53 +62,37 @@ int main(int argc, char **argv)
 	std::vector<std::vector<std::wstring>> fileLines;
 	fileLines.resize(scriptFiles.size());
 
+	// as well as the debug output (lines that are removed)
+	std::vector<std::vector<std::wstring>> fileLines_debug;
+	fileLines_debug.resize(scriptFiles.size());
+
 	// Loop through all the scripts, loading and cleaning them
 	for(size_t i = 0; i < scriptFiles.size(); i++)
 	{
 		// Loading
-		wprintf(				loadingstr_w.c_str(), 
-								scriptFiles.at(i).c_str()
-								);
-		LoadScriptIntoVector(	scriptFiles.at(i).c_str(), 
-								fileLines.at(i)
-								);
+		wprintf( loadingstr_w.c_str(), scriptFiles.at(i).c_str() );
+		int error_code = 0;
+		error_code = LoadScriptIntoVector( scriptFiles.at(i).c_str(), fileLines.at(i) );
+		if(error_code != 0) return -2;
 		
 		// Cleaning
-		wprintf(
-								cleaningstr_w.c_str(), 
-								scriptFiles.at(i).c_str()
-								);
-		CleanScript(fileLines.at(i));
+		wprintf( cleaningstr_w.c_str(), scriptFiles.at(i).c_str() );
+		CleanScript(fileLines.at(i), fileLines_debug.at(i));
 	};
 
-	
-	// Initialize PDF doc
-	HPDF_Doc pdf = HPDF_New (error_handler, NULL);
-    if (!pdf) {
-        printf ("error: cannot create PdfDoc object\n");
-        return -1;
-    };
-    HPDF_SetCompressionMode (pdf, HPDF_COMP_ALL);
-    std::vector<HPDF_Page> pages;
-
-	// Initialize font file
-	const char* font_name = HPDF_LoadTTFontFromFile (pdf, "font.ttf", HPDF_TRUE);
-
-	printf("Writing to PDF...\n");
-	WriteScriptToPDF(fileLines, pdf, font_name, pages,g_chapterDividers);
-	HPDF_SaveToFile(pdf, "output.pdf");
-	HPDF_Free (pdf);
-
-	WriteScriptToTXT(fileLines);
+	if( WriteScriptToTXT(fileLines, "output.txt") != 0 ) return -3;
+	if( WriteScriptToTXT(fileLines_debug, "output_debug.txt") != 0 ) return -4;
 
 	// Print time to complete and wait for input
 	clock_t end = clock();
 	double elapsed_secs = double(end - begin) / CLOCKS_PER_SEC;
 	elapsed_secs *= 1000;
-	printf("\nFinished in %f ms! Press any key to exit...\n", elapsed_secs);
+	int elapsed_millisecs = (int)elapsed_secs;
+	printf("\nFinished in %ims! Press any key to exit...\n", elapsed_millisecs);
 	_getch();
 
 	fileLines.clear();
+	fileLines_debug.clear();
 	return 0;
 };
 
@@ -170,7 +154,7 @@ int LoadScriptIntoVector( const wchar_t* _input, std::vector<std::wstring>& _vec
 	return 0;
 };
 
-int CleanScript(std::vector<std::wstring>& _input)
+int CleanScript(std::vector<std::wstring>& _input,std::vector<std::wstring>& _output)
 {
 	for(int l = 0; l < int(_input.size()); ++l)
 	{
@@ -250,6 +234,17 @@ int CleanScript(std::vector<std::wstring>& _input)
 		};
 
 		if(!success){
+			for(int c = 0; c < (int)prefixesToRemove.size(); ++c)
+			{
+				if(item == prefixesToRemove.at(c))
+				{
+					_input.at(l).erase(_input.at(l).begin(), _input.at(l).begin() + (prefixesToRemove.at(c).length() + 1));
+					break;
+				};
+			};
+		};
+
+		if(!success){
 			for(int c = 0; c < (int)charNames.size(); ++c)
 			{
 				if(item == charNames.at(c))
@@ -259,18 +254,6 @@ int CleanScript(std::vector<std::wstring>& _input)
 					std::wstring wcolon;
 					wcolon.assign(colon.begin(), colon.end());
 					_input.at(l).insert (0, charNames_fixed.at(c) + wcolon);
-					success = true;
-					break;
-				};
-			};
-		};
-
-		if(!success){
-			for(int c = 0; c < (int)prefixesToRemove.size(); ++c)
-			{
-				if(item == prefixesToRemove.at(c))
-				{
-					_input.at(l).erase(_input.at(l).begin(), _input.at(l).begin() + (prefixesToRemove.at(c).length() + 1));
 					success = true;
 					break;
 				};
@@ -286,6 +269,7 @@ int CleanScript(std::vector<std::wstring>& _input)
 			}
 			else 
 			{
+				_output.push_back(_input.at(l));
 				_input.erase(_input.begin() + l);
 				--l;
 			};
@@ -294,53 +278,71 @@ int CleanScript(std::vector<std::wstring>& _input)
 	return 0;
 };
 
-void LoadRequiredTextFiles(void)
+int LoadRequiredTextFiles(void)
 {
+	int error_code = 0;
+
 	printf("Loading: %s\n", "scripts/charnames.txt");
-	LoadTXTIntoVector("scripts/charnames.txt", charNames);
+	error_code = LoadTXTIntoVector("scripts/charnames.txt", charNames);
 
 	printf("Loading: %s\n", "scripts/charnames_fixed.txt");
-	LoadTXTIntoVector("scripts/charnames_fixed.txt", charNames_fixed);
+	error_code = LoadTXTIntoVector("scripts/charnames_fixed.txt", charNames_fixed);
 	
 	printf("Loading: %s\n", "scripts/debugstrings.txt");
-	LoadTXTIntoVector("scripts/debugstrings.txt", debugStrings);
+	error_code = LoadTXTIntoVector("scripts/debugstrings.txt", debugStrings);
 	
 	printf("Loading: %s\n", "scripts/replacementstrings.txt");
-	LoadTXTIntoVector("scripts/replacementstrings.txt", replacementStrings);
+	error_code = LoadTXTIntoVector("scripts/replacementstrings.txt", replacementStrings);
 	
 	printf("Loading: %s\n", "scripts/stringstoreplace.txt");
-	LoadTXTIntoVector("scripts/stringstoreplace.txt", stringsToReplace);
+	error_code = LoadTXTIntoVector("scripts/stringstoreplace.txt", stringsToReplace);
 	
 	printf("Loading: %s\n", "scripts/stringstoremove.txt");
-	LoadTXTIntoVector("scripts/stringstoremove.txt", stringsToRemove);
+	error_code = LoadTXTIntoVector("scripts/stringstoremove.txt", stringsToRemove);
 
 	printf("Loading: %s\n", "scripts/prefixestoremove.txt");
-	LoadTXTIntoVector("scripts/prefixestoremove.txt", prefixesToRemove);
+	error_code = LoadTXTIntoVector("scripts/prefixestoremove.txt", prefixesToRemove);
 	
 	printf("Loading: %s\n", "scripts/scriptfiles.txt");
-	LoadTXTIntoVector("scripts/scriptfiles.txt", scriptFiles);
+	error_code = LoadTXTIntoVector("scripts/scriptfiles.txt", scriptFiles);
+
+	return error_code;
 };
 
-void WriteScriptToTXT(std::vector<std::vector<std::wstring>>& fileLines)
+int WriteScriptToTXT(std::vector<std::vector<std::wstring>>& fileLines, const char* _filename = "output.txt")
 {
-	printf("Writing to TXT...\n");
-	std::ofstream textOutput("output.txt");
-	for(size_t f = 0; f < fileLines.size(); ++f)
+	printf("Writing to %s...\n", _filename);
+	std::ofstream textOutput(_filename);
+
+	if(!textOutput)
 	{
-		for(size_t l = 0; l < fileLines.at(f).size(); ++l)
+		printf("Failed to write %s!", _filename);
+		return -1;
+	}
+	else
+	{
+		//scripts/acts/files
+		for(size_t f = 0; f < fileLines.size(); ++f)
 		{
-			std::string temp_str;
-			temp_str.assign(fileLines.at(f).at(l).begin(), fileLines.at(f).at(l).end());
-			textOutput.write(temp_str.c_str(), fileLines.at(f).at(l).size());
-			textOutput << "\n\n";
+			//lines
+			for(size_t l = 0; l < fileLines.at(f).size(); ++l)
+			{
+				for(size_t ch = 0; ch < g_chapterDividers.at(f).size(); ch++)
+				{
+					if( (l) == g_chapterDividers.at(f).at(ch) )
+					{
+						textOutput << "-----------------------------------------------\n\n";
+						break;
+					};
+				};
+				std::string temp_str;
+				temp_str.assign(fileLines.at(f).at(l).begin(), fileLines.at(f).at(l).end());
+				textOutput.write(temp_str.c_str(), fileLines.at(f).at(l).size());
+				textOutput << "\n\n";
+			};
+			textOutput << "###################################################\n###################################################\n\n";
 		};
-		textOutput << "################################################### \n\n";
+		textOutput.close();
 	};
-	textOutput.close();
-};
-
-void error_handler (HPDF_STATUS error_no, HPDF_STATUS detail_no, void *user_data)
-{
-    printf ("ERROR: error_no=%04X, detail_no=%d\n",
-      (unsigned int) error_no, (int) detail_no);
+	return 0;
 };

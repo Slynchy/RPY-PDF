@@ -1,5 +1,14 @@
 #RPY-PDF Changelog
 
+#### v0.7.0
+- Removed PDF support
+	* Tough decision, but it makes the program much easier to compile, doesn't require any external libs, and the outputted PDFs didn't work anyway.
+- Now outputs a .txt file for further formatting.
+	* As well as another .txt file containing all the "garbage" strings, so you can see if strings were removed when they shouldn't be.
+- Bug/Todo list:
+	* Needs a configurable chapter/act divider?
+	* Try compiling to Linux
+
 #### v0.6.0
 - Added unicode support
 	* Still dislikes ellipses, but accentuations work now.

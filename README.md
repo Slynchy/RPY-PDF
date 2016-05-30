@@ -1,8 +1,8 @@
 # RPY-eBook
-For parsing .rpy script into eBook-friendly format (or txt, for further formatting)
+For parsing .rpy script into eBook-friendly format for further formatting
 
 # How to compile
-Link with latest versions of libpng, libhpdf, and zlib. Compile as normal.
+Compile as normal, no linking required
 
 # How to use
 Setup the corresponding text file to match parameters of the RPY script you wish to parse:
@@ -18,9 +18,9 @@ Setup the corresponding text file to match parameters of the RPY script you wish
 | stringstoreplace.txt                                 | List of strings to find and replace with respective string from replacementstrings.txt |
 | replacementstrings.txt                               | See above.                                                                      |
 
-Then, provide a font for the PDF to use, as well as an icon to put at the top of every page. Call these "font.ttf" and "logo.png". 
+For further compatibility/configuration, you can add strings to look for in "debugstrings.txt", and it will execute the respective function from the array of function pointers in "DebugStrings.h". These functions take the line the debug string was found in as a reference, so you can manipulate the string and then output it again. For example, you can write a function that replaces quotations with [] parentheses to indicate thoughts as opposed to speech.
 
-Once it is all set-up, simply run the EXE and it will spit out a TXT and a PDF file. The PDF file is better for reading on a computer/laptop, while the TXT file works excellently on Kindle.
+Once it is all set-up, simply run the EXE and it will spit out two .txt files; the formatted text for eBooks, and all the "garbage" data that was removed. The second file is so that you can verify that no strings were lost when it should be kept.
 
 # "Will this work with X?"
 This is designed to work with games written on the Ren'Py engine, not any specific game. If you set-up the text files properly, it should work with any software built on the engine.
