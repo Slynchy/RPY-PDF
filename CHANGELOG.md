@@ -1,5 +1,16 @@
 #RPY-PDF Changelog
 
+#### v0.8.0
+- Added better chapter recognition
+- Added (but commented-out) support for chapter naming from "chapternames.txt"
+- Many fixes/tweaks:
+	* Everything is in unicode now
+	* Added to_wstring and to_string functions
+	* Added error-checking to file loading.
+	* More that I've forgotten
+- Bug/Todo list:
+	* 
+
 #### v0.7.0
 - Removed PDF support
 	* Tough decision, but it makes the program much easier to compile, doesn't require any external libs, and the outputted PDFs didn't work anyway.
