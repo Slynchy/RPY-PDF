@@ -8,6 +8,8 @@ static std::vector<std::wstring> debugStrings;
 
 void IamAdebugStringFunction(std::wstring& _string, bool& _success);
 
-static void (* debugStrings_funcs[1])(std::wstring&, bool&) = { IamAdebugStringFunction };
+void RemoveCurlyParenthesis(std::wstring& _string);
+
+static void (* debugStrings_funcs[2])(std::wstring&, bool&) = { IamAdebugStringFunction };
 
 #endif

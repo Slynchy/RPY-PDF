@@ -31,21 +31,25 @@ static std::vector<std::wstring> prefixesToRemove;
 static std::vector<std::wstring> charNames;
 static std::vector<std::wstring> charNames_fixed;
 
-static std::vector<std::vector<int>> g_chapterDividers; 
-
 static std::vector<std::wstring> chapterNames;
 static std::vector<ChapterName> chapterNames_parsed;
 
 // Prototypes
-int WriteScriptToTXT(std::vector<Script>& fileLines, const char* _filename);
-int WriteScriptToTXT(std::vector<std::vector<std::wstring>>& fileLines, const char* _filename);
-int LoadRequiredTextFiles(void);
-int CleanScript(Script& _input, std::vector<std::wstring>&);
-int LoadScriptIntoVector( const wchar_t* _input, Script& _vector );
-int LoadTXTIntoVector( const char* _file, std::vector<std::wstring>& _vector );
+int WriteScriptToTXT(std::vector<Script>& fileLines, const char* _filename);							// Writes the entire collection of scripts to TXT
 
-int ParseChapters(std::vector<std::wstring>&, std::vector<ChapterName>&);
+int WriteScriptToTXT(std::vector<std::vector<std::wstring>>& fileLines, const char* _filename);			// Writes the array of array of strings to TXT (for the debug file)
 
+int LoadRequiredTextFiles(void);																		// Simply runs LoadTXTIntoVector onto all the necessary files
+
+int CleanScript(Script& _input, std::vector<std::wstring>&);											// The main cleaning algorithm; takes a script and the debug string vector as parameters
+
+int LoadScriptIntoVector( const wchar_t* _input, Script& _vector );										// Loads the specified file name into the specified script file
+
+int LoadTXTIntoVector( const char* _file, std::vector<std::wstring>& _vector );							// Loads the specified file name into the specified vector of wstrings
+
+int ParseChapters(std::vector<std::wstring>&, std::vector<ChapterName>&);								// Parses the array of wstrings and organises them into a vector of ChapterNames
+
+//Parses a wstring to string
 std::string to_string(std::wstring _input)
 {
 	std::string output;
@@ -54,6 +58,7 @@ std::string to_string(std::wstring _input)
 	return output;
 };
 
+//Parses a cstring to wstring
 std::wstring to_wstring(const char* _input)
 {
 	std::wstring output;
@@ -71,8 +76,9 @@ int main(int argc, char* argv[])
 	
 	// Load all the configs into the appropriate vectors
 	if(LoadRequiredTextFiles() != 0) return -1;
-
-	//ParseChapters(chapterNames, chapterNames_parsed);
+	
+	// Parse the chapternames into the array
+	ParseChapters(chapterNames, chapterNames_parsed);
 	
 	// Create and resize the primary script file vector to the number of scripts
 	std::vector<Script> fileLines;
@@ -146,10 +152,6 @@ int LoadScriptIntoVector( const wchar_t* _input, Script& _vector )
 		return -1;
 	};
 
-	// Add new entry to chapter dividers
-	std::vector<int> temp;
-	g_chapterDividers.push_back(temp);
-
 	// Load meaningful lines into vector
 	std::wstring line;
 	while (std::getline(inputFile , line)) 
@@ -185,162 +187,124 @@ int CleanScript(Script& input, std::vector<std::wstring>& _output)
 
 		Chapter& _input = input.m_chapter.at(chap);
 
-		/*char response = 0;
-		bool foundChapterName = false;
-
 		if(_input.m_name.substr(0, 3) == to_wstring("en_"))
 		{
 			_input.m_name.erase(0,3);
 		};
 
-		for(size_t n = 0; n < chapterNames_parsed.size(); n++)
+		for(int l = 0; l < int(_input.m_script.size()); ++l)
 		{
-			if(_input.m_name == chapterNames_parsed.at(n).m_codename)
-			{
-				std::wcout << "\nWould you like to keep the following chapter? Y/N" << '\n' << '	' << chapterNames_parsed.at(n).m_name << '\n' << '	' << chapterNames_parsed.at(n).m_desc << '\n';
-				foundChapterName = true;
-				break;
-			};
-		};
 
-		if(!foundChapterName)
-		{
-			printf("\n\nWould you like to keep chapter: %s? Y/N", to_string(_input.m_name).c_str());
-		};
+			RemoveCurlyParenthesis(_input.m_script.at(l).m_line);
 
-		while(response != 'Y' && response != 'y' && response != 'N' && response != 'n')
-		{
-			response = _getch();
-		};
-
-		if(response == 'Y' || response == 'y')
-		{*/
-
-			for(int l = 0; l < int(_input.m_script.size()); ++l)
+			size_t temp = 0;
+			for(int c = 0; c < (int)stringsToRemove.size(); ++c)
 			{
 				size_t temp = 0;
-				for(int c = 0; c < (int)stringsToRemove.size(); ++c)
+				while(temp != std::wstring::npos)
 				{
-					size_t temp = 0;
-					while(temp != std::wstring::npos)
+					temp = _input.m_script.at(l).m_line.find(stringsToRemove.at(c), 0);
+					if(temp != std::wstring::npos)
 					{
-						temp = _input.m_script.at(l).m_line.find(stringsToRemove.at(c), 0);
-						if(temp != std::wstring::npos)
-						{
-							_input.m_script.at(l).m_line.erase(
-								temp,
-								stringsToRemove.at(c).length());
-						} 
-						else 
-						{
-							break;
-						};
-					};
-				};
-				for(int c= 0; c < (int)stringsToReplace.size(); ++c)
-				{
-					size_t temp = 0;
-					while(temp != std::wstring::npos)
-					{
-						temp = _input.m_script.at(l).m_line.find(stringsToReplace.at(c), 0);
-						if(temp != std::wstring::npos)
-						{
-							_input.m_script.at(l).m_line.erase(
-								temp,
-								stringsToReplace.at(c).length());
-							_input.m_script.at(l).m_line.insert(temp, replacementStrings.at(c));
-						} 
-						else 
-						{
-							break;
-						};
-					};
-				};
-		
-				bool success = false;
-				bool breakout = false;
-				for(size_t d = 0; d < debugStrings.size(); d++)
-				{
-					size_t temp = 0;
-					while(temp != std::wstring::npos)
-					{
-						temp = _input.m_script.at(l).m_line.find(debugStrings.at(d), 0);
-				
-						if(temp != std::string::npos)
-						{
-							debugStrings_funcs[d](_input.m_script.at(l).m_line, success);
-							breakout = true;
-							break;
-						}
-						else
-						{
-							break;
-						};
-					};
-					if(breakout) break;
-				};
-
-				std::wstringstream iss(_input.m_script.at(l).m_line); 
-				std::wstring item;
-				iss >> item;
-
-				std::string chapterdivide_str = "label";
-				std::wstring chapterdivide_wstr;
-				chapterdivide_wstr.assign(chapterdivide_str.begin(), chapterdivide_str.end());
-
-				if(item == chapterdivide_wstr && !success)
-				{
-					g_chapterDividers.back().push_back(l);
-				};
-
-				if(!success){
-					for(int c = 0; c < (int)prefixesToRemove.size(); ++c)
-					{
-						if(item == prefixesToRemove.at(c))
-						{
-							_input.m_script.at(l).m_line.erase(_input.m_script.at(l).m_line.begin(), _input.m_script.at(l).m_line.begin() + (prefixesToRemove.at(c).length() + 1));
-							break;
-						};
-					};
-				};
-
-				if(!success){
-					for(int c = 0; c < (int)charNames.size(); ++c)
-					{
-						if(item == charNames.at(c))
-						{
-							_input.m_script.at(l).m_line.erase(_input.m_script.at(l).m_line.begin(), _input.m_script.at(l).m_line.begin() + (charNames.at(c).length() + 1));
-							std::string colon(": ");
-							std::wstring wcolon;
-							wcolon.assign(colon.begin(), colon.end());
-							_input.m_script.at(l).m_line.insert (0, charNames_fixed.at(c) + wcolon);
-							success = true;
-							break;
-						};
-					};
-				};
-			
-				if(!success)
-				{
-					if(_input.m_script.at(l).m_line.at(0) == '\"')
-					{
-						_input.m_script.at(l).m_line.erase(_input.m_script.at(l).m_line.begin());
-						_input.m_script.at(l).m_line.erase(_input.m_script.at(l).m_line.end() - 1);
-					}
+						_input.m_script.at(l).m_line.erase(
+							temp,
+							stringsToRemove.at(c).length());
+					} 
 					else 
 					{
-						_output.push_back(_input.m_script.at(l).m_line);
-						_input.m_script.erase(_input.m_script.begin() + l);
-						--l;
+						break;
 					};
 				};
 			};
-	/*	}
-		else 
-		{
-			_input.m_script.clear();
+			for(int c= 0; c < (int)stringsToReplace.size(); ++c)
+			{
+				size_t temp = 0;
+				while(temp != std::wstring::npos)
+				{
+					temp = _input.m_script.at(l).m_line.find(stringsToReplace.at(c), 0);
+					if(temp != std::wstring::npos)
+					{
+						_input.m_script.at(l).m_line.erase(
+							temp,
+							stringsToReplace.at(c).length());
+						_input.m_script.at(l).m_line.insert(temp, replacementStrings.at(c));
+					} 
+					else 
+					{
+						break;
+					};
+				};
+			};
+		
+			bool success = false;
+			bool breakout = false;
+			for(size_t d = 0; d < debugStrings.size(); d++)
+			{
+				size_t temp = 0;
+				while(temp != std::wstring::npos)
+				{
+					temp = _input.m_script.at(l).m_line.find(debugStrings.at(d), 0);
+				
+					if(temp != std::string::npos)
+					{
+						debugStrings_funcs[d](_input.m_script.at(l).m_line, success);
+						breakout = true;
+						break;
+					}
+					else
+					{
+						break;
+					};
+				};
+				if(breakout) break;
+			};
+
+			std::wstringstream iss(_input.m_script.at(l).m_line); 
+			std::wstring item;
+			iss >> item;
+
+			if(!success){
+				for(int c = 0; c < (int)prefixesToRemove.size(); ++c)
+				{
+					if(item == prefixesToRemove.at(c))
+					{
+						_input.m_script.at(l).m_line.erase(_input.m_script.at(l).m_line.begin(), _input.m_script.at(l).m_line.begin() + (prefixesToRemove.at(c).length() + 1));
+						break;
+					};
+				};
+			};
+
+			if(!success){
+				for(int c = 0; c < (int)charNames.size(); ++c)
+				{
+					if(item == charNames.at(c))
+					{
+						_input.m_script.at(l).m_line.erase(_input.m_script.at(l).m_line.begin(), _input.m_script.at(l).m_line.begin() + (charNames.at(c).length() + 1));
+						std::string colon(": ");
+						std::wstring wcolon;
+						wcolon.assign(colon.begin(), colon.end());
+						_input.m_script.at(l).m_line.insert (0, charNames_fixed.at(c) + wcolon);
+						success = true;
+						break;
+					};
+				};
+			};
+			
+			if(!success)
+			{
+				if(_input.m_script.at(l).m_line.at(0) == '\"')
+				{
+					_input.m_script.at(l).m_line.erase(_input.m_script.at(l).m_line.begin());
+					_input.m_script.at(l).m_line.erase(_input.m_script.at(l).m_line.end() - 1);
+				}
+				else 
+				{
+					_output.push_back(_input.m_script.at(l).m_line);
+					_input.m_script.erase(_input.m_script.begin() + l);
+					--l;
+				};
+			};
 		};
-	};*/
 	};
 	return 0;
 };
@@ -373,8 +337,8 @@ int LoadRequiredTextFiles(void)
 	printf("Loading: %s\n", "scripts/scriptfiles.txt");
 	error_code = LoadTXTIntoVector("scripts/scriptfiles.txt", scriptFiles);
 	
-	//printf("Loading: %s\n", "scripts/chapternames.txt");
-	//error_code = LoadTXTIntoVector("scripts/chapternames.txt", chapterNames);
+	printf("Loading: %s\n", "scripts/chapternames.txt");
+	error_code = LoadTXTIntoVector("scripts/chapternames.txt", chapterNames);
 
 	return error_code;
 };
@@ -383,6 +347,8 @@ int WriteScriptToTXT(std::vector<Script>& fileLines, const char* _filename = "ou
 {
 	printf("Writing to %s...\n", _filename);
 	std::wofstream textOutput(_filename);
+
+	int chapterCount = 0;
 
 	if(!textOutput)
 	{
@@ -405,9 +371,41 @@ int WriteScriptToTXT(std::vector<Script>& fileLines, const char* _filename = "ou
 					textOutput << fileLines.at(f).m_chapter.at(chap).m_script.at(l).m_line;
 					textOutput << "\n\n";
 				};
-				if(fileLines.at(f).m_chapter.at(chap).m_script.size() != 0) textOutput << "-----------------------------------------------\n\n";
+
+				if(fileLines.at(f).m_chapter.at(chap).m_script.size() != 0 && !( (f+1) == fileLines.size() && (chap+1) == fileLines.at(f).m_chapter.size() )) 
+				{
+					textOutput << "-----------------------------------------------\n";
+					
+					for(size_t n = 0; n < chapterNames_parsed.size(); n++)
+					{
+						std::wstring tempstr;
+						int temp = chap;
+						if(temp < (int)fileLines.at(f).m_chapter.size()-1)
+						{
+							temp++;
+							tempstr = fileLines.at(f).m_chapter.at(temp).m_name;
+						} 
+						else 
+						{
+							if((f+1) < fileLines.size())
+							{
+								tempstr = fileLines.at(f+1).m_chapter.at(0).m_name;
+							} 
+							else 
+							{
+								tempstr = fileLines.back().m_chapter.at(0).m_name;
+							};
+						};
+						if(tempstr == chapterNames_parsed.at(n).m_codename)
+						{
+							textOutput << "Chapter " << (++chapterCount) << " - " << chapterNames_parsed.at(n).m_name << "\n\n"; //<< '	' << chapterNames_parsed.at(n).m_desc << '\n';
+							break;
+						};
+					};
+
+				};
 			};
-			textOutput << "###################################################\n###################################################\n\n";
+			textOutput << "###################################\n\n";
 		};
 		textOutput.close();
 	};
@@ -432,14 +430,6 @@ int WriteScriptToTXT(std::vector<std::vector<std::wstring>>& fileLines, const ch
 			//lines
 			for(size_t l = 0; l < fileLines.at(f).size(); ++l)
 			{
-				/*for(size_t ch = 0; ch < g_chapterDividers.at(f).size(); ch++)
-				{
-					if( (l) == g_chapterDividers.at(f).at(ch) )
-					{
-						textOutput << "-----------------------------------------------\n\n";
-						break;
-					};
-				};*/
 				textOutput << fileLines.at(f).at(l);
 				textOutput << "\n\n";
 			};
@@ -452,11 +442,7 @@ int WriteScriptToTXT(std::vector<std::vector<std::wstring>>& fileLines, const ch
 
 int ParseChapters(std::vector<std::wstring>& _input, std::vector<ChapterName>& _output)
 {
-	//std::wstring str = to_wstring("(\"Out Cold\", \"NOP1\", \"On a cold, snowy day, Hisao's dreams were about to be realized, only to be cut short by a sudden heart attack.\", (\"Act 1\",\"Prologue\")),");
-
-	// Remove spaces
-	/*str.erase(std::remove_if(str.begin(), str.end(), isspace));
-	str.erase(std::remove_if(str.begin(), str.end(), isspace));*/
+	printf("Parsing chapter names...\n");
 
 	for(size_t n = 0; n < _input.size(); n++)
 	{

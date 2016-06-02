@@ -1,5 +1,9 @@
 #RPY-PDF Changelog
 
+#### v1.0.0
+- Cleaned up the code, added comments
+- Can now output chapter names if formatted correctly in "chapternames.txt"
+
 #### v0.8.0
 - Added better chapter recognition
 - Added (but commented-out) support for chapter naming from "chapternames.txt"
@@ -8,8 +12,6 @@
 	* Added to_wstring and to_string functions
 	* Added error-checking to file loading.
 	* More that I've forgotten
-- Bug/Todo list:
-	* 
 
 #### v0.7.0
 - Removed PDF support

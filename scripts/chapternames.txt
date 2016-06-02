@@ -1,0 +1,2 @@
+("Chapter name", "Chapter codename", "Chapter description", ("no important info","this will get deleted")),
+("The Start of Something", "open1", "This is the description of the chapter.", ("no important info either","i am an unnecessary string")),

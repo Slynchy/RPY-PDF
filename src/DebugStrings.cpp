@@ -1,5 +1,18 @@
 #include "DebugStrings.h"
 
+void RemoveCurlyParenthesis(std::wstring& _string)
+{
+
+	while(_string.find('{') != std::string::npos)
+	{
+		unsigned int first = _string.find('{');
+		unsigned int last = _string.find_last_of('}');
+		_string.erase (first, (last+1)-first);
+	};
+
+	return;
+};
+
 void IamAdebugStringFunction(std::wstring& _string, bool& _success)
 {
 	std::string test = "Name";
