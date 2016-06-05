@@ -1,5 +1,5 @@
 # RPY-eBook
-For parsing .rpy script into eBook-friendly format for further formatting
+For parsing .rpy/KEY script into eBook-friendly format for further formatting
 
 # How to compile
 Compile as normal, no linking required

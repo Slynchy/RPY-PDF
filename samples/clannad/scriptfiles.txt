@@ -1,0 +1,10 @@
+scripts/shizune/script-a1-monday.rpy
+scripts/shizune/script-a1-tuesday.rpy
+scripts/shizune/script-a1-wednesday.rpy
+scripts/shizune/script-a1-thursday.rpy
+scripts/shizune/script-a1-friday.rpy
+scripts/shizune/script-a1-saturday.rpy
+scripts/shizune/script-a1-sunday.rpy
+scripts/shizune/script-a2-shizune.rpy
+scripts/shizune/script-a3-shizune.rpy
+scripts/shizune/script-a4-shizune.rpy

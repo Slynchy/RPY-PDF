@@ -1,5 +1,14 @@
 #RPY-PDF Changelog
 
+#### v1.1.0
+- Commenced support for KEY game script (e.g. Clannad)
+	* By no means complete; has some weird bugs
+- Added some samples
+	* NOTE: These samples do not contain copyrighted content and are not intended for use with the tool but only to see how the tool can be used on existing scripts.
+- Need to add support for $X functions in RPY script (e.g. note text)
+- Maybe add a "straight to MS Word" mode, which automatically inserts ^m (new page) for chapter changes and formats titles?
+
+
 #### v1.0.0
 - Cleaned up the code, added comments
 - Can now output chapter names if formatted correctly in "chapternames.txt"

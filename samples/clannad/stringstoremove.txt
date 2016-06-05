@@ -1,0 +1,8 @@
+\size{}
+\b
+\u
+\n
+\p
+\g
+\r
+centered 

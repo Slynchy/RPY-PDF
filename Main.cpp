@@ -8,6 +8,9 @@
 #include "ScriptLines.h"
 #include "DebugStrings.h"
 
+#include "KEY.h"
+#include "RPY.h"
+
 #include <iostream>
 #include <fstream>
 #include <vector>
@@ -19,7 +22,7 @@
 #include <codecvt>
 
 // Arrays for storing text data
-static std::vector<std::wstring> scriptFiles;
+static std::vector<ScriptFile> scriptFiles;
 
 static std::vector<std::wstring> stringsToReplace;
 static std::vector<std::wstring> replacementStrings;
@@ -34,6 +37,10 @@ static std::vector<std::wstring> charNames_fixed;
 static std::vector<std::wstring> chapterNames;
 static std::vector<ChapterName> chapterNames_parsed;
 
+static std::vector<std::wstring> KEY_FlagStrings;
+
+static std::vector<std::wstring> debugStrings;
+
 // Prototypes
 int WriteScriptToTXT(std::vector<Script>& fileLines, const char* _filename);							// Writes the entire collection of scripts to TXT
 
@@ -41,31 +48,12 @@ int WriteScriptToTXT(std::vector<std::vector<std::wstring>>& fileLines, const ch
 
 int LoadRequiredTextFiles(void);																		// Simply runs LoadTXTIntoVector onto all the necessary files
 
-int CleanScript(Script& _input, std::vector<std::wstring>&);											// The main cleaning algorithm; takes a script and the debug string vector as parameters
-
 int LoadScriptIntoVector( const wchar_t* _input, Script& _vector );										// Loads the specified file name into the specified script file
 
 int LoadTXTIntoVector( const char* _file, std::vector<std::wstring>& _vector );							// Loads the specified file name into the specified vector of wstrings
+int LoadScriptFileNamesIntoVector( const char* _file, std::vector<ScriptFile>& _vector );				// Same as above
 
 int ParseChapters(std::vector<std::wstring>&, std::vector<ChapterName>&);								// Parses the array of wstrings and organises them into a vector of ChapterNames
-
-//Parses a wstring to string
-std::string to_string(std::wstring _input)
-{
-	std::string output;
-	std::wstring input = _input;
-	output.assign(input.begin(), input.end());
-	return output;
-};
-
-//Parses a cstring to wstring
-std::wstring to_wstring(const char* _input)
-{
-	std::wstring output;
-	std::string input = _input;
-	output.assign(input.begin(), input.end());
-	return output;
-};
 
 int main(int argc, char* argv[])
 {
@@ -75,7 +63,11 @@ int main(int argc, char* argv[])
 	clock_t begin = clock();
 	
 	// Load all the configs into the appropriate vectors
-	if(LoadRequiredTextFiles() != 0) return -1;
+	if(LoadRequiredTextFiles() != 0)
+	{
+		_getch();
+		return -1;
+	};
 	
 	// Parse the chapternames into the array
 	ParseChapters(chapterNames, chapterNames_parsed);
@@ -92,14 +84,28 @@ int main(int argc, char* argv[])
 	for(size_t i = 0; i < scriptFiles.size(); i++)
 	{
 		// Loading
-		wprintf( to_wstring("Loading: %s\n").c_str(), scriptFiles.at(i).c_str() );
+		wprintf( to_wstring("Loading: %s\n").c_str(), scriptFiles.at(i).m_filepath.c_str() );
 		int error_code = 0;
-		error_code = LoadScriptIntoVector( scriptFiles.at(i).c_str(), fileLines.at(i) );
-		if(error_code != 0) return -2;
+		error_code = LoadScriptIntoVector( scriptFiles.at(i).m_filepath.c_str(), fileLines.at(i) );
+		if(error_code != 0)
+		{
+			_getch();
+			return -2;
+		};
 		
 		// Cleaning
-		wprintf( to_wstring("Cleaning script file: %s\n").c_str(), scriptFiles.at(i).c_str() );
-		CleanScript(fileLines.at(i), fileLines_debug.at(i));
+		wprintf( to_wstring("Cleaning script file: %s\n").c_str(), scriptFiles.at(i).m_filepath.c_str() );
+		switch(scriptFiles.at(i).m_type)
+		{
+			case FILETYPES(RPY):
+				CleanScript_RPY(fileLines.at(i), fileLines_debug.at(i), stringsToRemove, stringsToReplace, replacementStrings, prefixesToRemove, charNames, charNames_fixed, debugStrings);
+				break;
+			case FILETYPES(UTF8):
+				CleanScript_KEY(fileLines.at(i), fileLines_debug.at(i), stringsToRemove, stringsToReplace, replacementStrings, prefixesToRemove, charNames, charNames_fixed, KEY_FlagStrings);
+				break;
+			default:
+				break;
+		};
 	};
 
 	if( WriteScriptToTXT(fileLines, "output.txt") != 0 ) return -3;
@@ -107,14 +113,49 @@ int main(int argc, char* argv[])
 
 	// Print time to complete and wait for input
 	clock_t end = clock();
-	double elapsed_secs = double(end - begin) / CLOCKS_PER_SEC;
-	elapsed_secs *= 1000;
+	double elapsed_secs = double(end - begin);
 	int elapsed_millisecs = (int)elapsed_secs;
 	printf("\nFinished in %ims! Press any key to exit...\n", elapsed_millisecs);
 	_getch();
 
 	fileLines.clear();
 	fileLines_debug.clear();
+	return 0;
+};
+
+int LoadScriptFileNamesIntoVector( const char* _file, std::vector<ScriptFile>& _vector )
+{
+	std::wifstream inputFile;
+	inputFile.open(_file);
+	
+	if(!inputFile){ 
+		printf("Failed to load: %s\n", _file);
+		return -1;
+	};
+	
+	ScriptFile temp;
+	while (std::getline(inputFile , temp.m_filepath)) 
+	{
+		size_t dotpos;
+		dotpos = temp.m_filepath.find_last_of('.');
+		if(dotpos != std::wstring::npos)
+		{
+			std::wstring FileTypeStr;
+			int dbg2 = (dotpos - temp.m_filepath.size()) * -1;
+			FileTypeStr = temp.m_filepath.substr( dotpos, dbg2);
+			for(int n = 0; n < FILETYPES(NUM_OF_FILETYPES); n++)
+			{
+				if(FileTypeStr == to_wstring(FileTypeNames[n].c_str()))
+				{
+					temp.m_type = FILETYPES(n);
+					break;
+				};
+			};
+		};
+		_vector.push_back(temp);
+	};
+	
+	inputFile.close();
 	return 0;
 };
 
@@ -170,6 +211,11 @@ int LoadScriptIntoVector( const wchar_t* _input, Script& _vector )
 
 			ScriptLine temp;
 			temp.m_line = line;
+			if(_vector.m_chapter.size() == 0) 
+			{
+				Chapter temp;
+				_vector.m_chapter.push_back(temp);
+			};
 			_vector.m_chapter.back().m_script.push_back(temp);
 		};
 	};
@@ -177,135 +223,6 @@ int LoadScriptIntoVector( const wchar_t* _input, Script& _vector )
 
 	// Cleanup
 	inputFile.close();
-	return 0;
-};
-
-int CleanScript(Script& input, std::vector<std::wstring>& _output)
-{
-	for(size_t chap = 0; chap < input.m_chapter.size(); chap++)
-	{
-
-		Chapter& _input = input.m_chapter.at(chap);
-
-		if(_input.m_name.substr(0, 3) == to_wstring("en_"))
-		{
-			_input.m_name.erase(0,3);
-		};
-
-		for(int l = 0; l < int(_input.m_script.size()); ++l)
-		{
-
-			RemoveCurlyParenthesis(_input.m_script.at(l).m_line);
-
-			size_t temp = 0;
-			for(int c = 0; c < (int)stringsToRemove.size(); ++c)
-			{
-				size_t temp = 0;
-				while(temp != std::wstring::npos)
-				{
-					temp = _input.m_script.at(l).m_line.find(stringsToRemove.at(c), 0);
-					if(temp != std::wstring::npos)
-					{
-						_input.m_script.at(l).m_line.erase(
-							temp,
-							stringsToRemove.at(c).length());
-					} 
-					else 
-					{
-						break;
-					};
-				};
-			};
-			for(int c= 0; c < (int)stringsToReplace.size(); ++c)
-			{
-				size_t temp = 0;
-				while(temp != std::wstring::npos)
-				{
-					temp = _input.m_script.at(l).m_line.find(stringsToReplace.at(c), 0);
-					if(temp != std::wstring::npos)
-					{
-						_input.m_script.at(l).m_line.erase(
-							temp,
-							stringsToReplace.at(c).length());
-						_input.m_script.at(l).m_line.insert(temp, replacementStrings.at(c));
-					} 
-					else 
-					{
-						break;
-					};
-				};
-			};
-		
-			bool success = false;
-			bool breakout = false;
-			for(size_t d = 0; d < debugStrings.size(); d++)
-			{
-				size_t temp = 0;
-				while(temp != std::wstring::npos)
-				{
-					temp = _input.m_script.at(l).m_line.find(debugStrings.at(d), 0);
-				
-					if(temp != std::string::npos)
-					{
-						debugStrings_funcs[d](_input.m_script.at(l).m_line, success);
-						breakout = true;
-						break;
-					}
-					else
-					{
-						break;
-					};
-				};
-				if(breakout) break;
-			};
-
-			std::wstringstream iss(_input.m_script.at(l).m_line); 
-			std::wstring item;
-			iss >> item;
-
-			if(!success){
-				for(int c = 0; c < (int)prefixesToRemove.size(); ++c)
-				{
-					if(item == prefixesToRemove.at(c))
-					{
-						_input.m_script.at(l).m_line.erase(_input.m_script.at(l).m_line.begin(), _input.m_script.at(l).m_line.begin() + (prefixesToRemove.at(c).length() + 1));
-						break;
-					};
-				};
-			};
-
-			if(!success){
-				for(int c = 0; c < (int)charNames.size(); ++c)
-				{
-					if(item == charNames.at(c))
-					{
-						_input.m_script.at(l).m_line.erase(_input.m_script.at(l).m_line.begin(), _input.m_script.at(l).m_line.begin() + (charNames.at(c).length() + 1));
-						std::string colon(": ");
-						std::wstring wcolon;
-						wcolon.assign(colon.begin(), colon.end());
-						_input.m_script.at(l).m_line.insert (0, charNames_fixed.at(c) + wcolon);
-						success = true;
-						break;
-					};
-				};
-			};
-			
-			if(!success)
-			{
-				if(_input.m_script.at(l).m_line.at(0) == '\"')
-				{
-					_input.m_script.at(l).m_line.erase(_input.m_script.at(l).m_line.begin());
-					_input.m_script.at(l).m_line.erase(_input.m_script.at(l).m_line.end() - 1);
-				}
-				else 
-				{
-					_output.push_back(_input.m_script.at(l).m_line);
-					_input.m_script.erase(_input.m_script.begin() + l);
-					--l;
-				};
-			};
-		};
-	};
 	return 0;
 };
 
@@ -335,10 +252,13 @@ int LoadRequiredTextFiles(void)
 	error_code = LoadTXTIntoVector("scripts/prefixestoremove.txt", prefixesToRemove);
 	
 	printf("Loading: %s\n", "scripts/scriptfiles.txt");
-	error_code = LoadTXTIntoVector("scripts/scriptfiles.txt", scriptFiles);
+	error_code = LoadScriptFileNamesIntoVector("scripts/scriptfiles.txt", scriptFiles);
 	
 	printf("Loading: %s\n", "scripts/chapternames.txt");
 	error_code = LoadTXTIntoVector("scripts/chapternames.txt", chapterNames);
+	
+	printf("Loading: %s\n", "scripts/key_flagstrings.txt");
+	error_code = LoadTXTIntoVector("scripts/key_flagstrings.txt", KEY_FlagStrings);
 
 	return error_code;
 };
