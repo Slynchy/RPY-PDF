@@ -1,5 +1,16 @@
 #RPY-PDF Changelog
 
+#### v1.2.0
+- Replaced chapter/act dividers with '\f' (page break)
+	* This does not work with .txt->Kindle, but works with .txt->MSWord->MOBI->Kindle
+- Added unknown character name detection
+	* For when the character's name matches this pattern: 
+		+ "Unknown" "This is speech."
+	* Works with Katawa Shoujo script, not sure about other RPY scripts
+- Lua implementation
+	* Doesn't do anything yet
+- Debug function examples (see DebugStrings.cpp)
+
 #### v1.1.0
 - Commenced support for KEY game script (e.g. Clannad)
 	* By no means complete; has some weird bugs

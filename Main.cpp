@@ -1,5 +1,5 @@
 /*
-	RPY-eBook
+	RPY-eBook v1.2.0
 		By Sam Lynch
 
 	For parsing .rpy script into eBook-friendly text
@@ -57,7 +57,7 @@ int ParseChapters(std::vector<std::wstring>&, std::vector<ChapterName>&);							
 
 int main(int argc, char* argv[])
 {
-	std::cout << "RPY-eBook (c) Sam Lynch" << std::endl << std::endl;
+	std::cout << "RPY-eBook v1.2.0 (c) Sam Lynch" << std::endl << std::endl;
 
 	// Start the clock for benchmarking
 	clock_t begin = clock();
@@ -294,7 +294,7 @@ int WriteScriptToTXT(std::vector<Script>& fileLines, const char* _filename = "ou
 
 				if(fileLines.at(f).m_chapter.at(chap).m_script.size() != 0 && !( (f+1) == fileLines.size() && (chap+1) == fileLines.at(f).m_chapter.size() )) 
 				{
-					textOutput << "-----------------------------------------------\n";
+					textOutput << '\f';
 					
 					for(size_t n = 0; n < chapterNames_parsed.size(); n++)
 					{
@@ -325,7 +325,7 @@ int WriteScriptToTXT(std::vector<Script>& fileLines, const char* _filename = "ou
 
 				};
 			};
-			textOutput << "###################################\n\n";
+			textOutput << '\f';//"###################################\n\n";
 		};
 		textOutput.close();
 	};

@@ -76,8 +76,13 @@ int CleanScript_RPY(
 				
 					if(temp != std::string::npos)
 					{
+						//if(d == 2)
+						//{
+						//	printf("I'm a breakpoint\n");
+						//};
 						debugStrings_funcs[d](_input.m_script.at(l).m_line, success);
-						breakout = true;
+						//TestLua(to_string(_input.m_script.at(l).m_line), l);
+						if(success == true) breakout = true;
 						break;
 					}
 					else
@@ -109,10 +114,7 @@ int CleanScript_RPY(
 					if(item == charNames.at(c))
 					{
 						_input.m_script.at(l).m_line.erase(_input.m_script.at(l).m_line.begin(), _input.m_script.at(l).m_line.begin() + (charNames.at(c).length() + 1));
-						std::string colon(": ");
-						std::wstring wcolon;
-						wcolon.assign(colon.begin(), colon.end());
-						_input.m_script.at(l).m_line.insert (0, charNames_fixed.at(c) + wcolon);
+						_input.m_script.at(l).m_line.insert (0, charNames_fixed.at(c) + to_wstring(": "));
 						success = true;
 						break;
 					};
@@ -121,10 +123,29 @@ int CleanScript_RPY(
 			
 			if(!success)
 			{
+				// Narrative or unknown character speech
 				if(_input.m_script.at(l).m_line.at(0) == '\"')
 				{
-					_input.m_script.at(l).m_line.erase(_input.m_script.at(l).m_line.begin());
-					_input.m_script.at(l).m_line.erase(_input.m_script.at(l).m_line.end() - 1);
+					if( std::count(_input.m_script.at(l).m_line.begin(), _input.m_script.at(l).m_line.end(), '\"') == 4 )
+					{
+						// 4 quotation marks = unknown character speech
+						ScriptLine* ACTV_LINE = &_input.m_script.at(l);
+
+						// So erase first quotation mark
+						_input.m_script.at(l).m_line.erase(_input.m_script.at(l).m_line.begin());
+
+						// find second one and erase
+						size_t tempPos = _input.m_script.at(l).m_line.find_first_of('\"', 0);
+						_input.m_script.at(l).m_line.erase(tempPos, 1);
+
+						// Replace with colon
+						_input.m_script.at(l).m_line.insert (tempPos, to_wstring(":"));
+					}
+					else 
+					{
+						_input.m_script.at(l).m_line.erase(_input.m_script.at(l).m_line.begin());
+						_input.m_script.at(l).m_line.erase(_input.m_script.at(l).m_line.end() - 1);
+					};
 				}
 				else 
 				{
